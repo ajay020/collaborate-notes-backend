@@ -2,31 +2,65 @@ import { Server, Socket } from "socket.io";
 
 const notes: Record<string, string> = {};
 
+// noteId -> set of socketIds
+const noteUsers: Record<string, Set<string>> = {};
+
 export const registerNoteHandlers = (io: Server, socket: Socket) => {
     console.log("New client connected:", socket.id);
 
     // USER JOINS A ROOM (NOTE)
     socket.on("join-note", (noteId: string) => {
         socket.join(noteId);
-        console.log(`User ${socket.id} joined note ${noteId}`);
 
-        // send existing note content
+        // init if not exists
+        if (!noteUsers[noteId]) {
+            noteUsers[noteId] = new Set();
+        }
+
+        noteUsers[noteId].add(socket.id);
+
+        console.log(`User ${socket.id} joined ${noteId}`);
+
+        //  send updated count
+        io.to(noteId).emit("users-update", {
+            count: noteUsers[noteId].size,
+        });
+
+        // send existing note
         const existingContent = notes[noteId] || "";
         socket.emit("note-load", existingContent);
     });
 
+    socket.on("typing", (noteId: string) => {
+        console.log(`User ${socket.id} is typing in note ${noteId}`);
+        socket.to(noteId).emit("user-typing", socket.id);
+    });
+
     // USER EDITS NOTE
     socket.on("note-change", ({ noteId, content }) => {
-        console.log(`Note ${noteId} updated`);
-
-        // SAVE in memory
+        // save
         notes[noteId] = content;
 
-        // SEND to others in same room
-        socket.to(noteId).emit("note-update", content);
+        //  send content + sender id
+        socket.to(noteId).emit("note-update", {
+            content,
+            senderId: socket.id,
+        });
     });
 
     socket.on("disconnect", () => {
-        console.log("Client disconnected:", socket.id);
+        console.log("User disconnected:", socket.id);
+
+        // remove user from all rooms
+        for (const noteId in noteUsers) {
+            if (noteUsers[noteId].has(socket.id)) {
+                noteUsers[noteId].delete(socket.id);
+
+                // update others
+                io.to(noteId).emit("users-update", {
+                    count: noteUsers[noteId].size,
+                });
+            }
+        }
     });
 };
