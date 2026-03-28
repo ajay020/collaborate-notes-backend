@@ -2,6 +2,12 @@ import http from "http";
 import { Server } from "socket.io";
 import app from "./app";
 import { registerNoteHandlers } from "./sockets/note.socket";
+import { connectDB } from "./config/db";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+connectDB();
 
 const server = http.createServer(app);
 

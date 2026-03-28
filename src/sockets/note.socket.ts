@@ -1,6 +1,8 @@
 import { Server, Socket } from "socket.io";
+import { Note } from "../models/Note";
 
 const notes: Record<string, string> = {};
+const saveTimeouts: Record<string, NodeJS.Timeout> = {};
 
 // noteId -> set of socketIds
 const noteUsers: Record<string, Set<string>> = {};
@@ -9,7 +11,7 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
     console.log("New client connected:", socket.id);
 
     // USER JOINS A ROOM (NOTE)
-    socket.on("join-note", (noteId: string) => {
+    socket.on("join-note", async (noteId: string) => {
         socket.join(noteId);
 
         // init if not exists
@@ -27,8 +29,13 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
         });
 
         // send existing note
-        const existingContent = notes[noteId] || "";
-        socket.emit("note-load", existingContent);
+        let note = await Note.findOne({ noteId });
+
+        if (!note) {
+            note = await Note.create({ noteId, content: "" });
+        }
+
+        socket.emit("note-load", note.content);
     });
 
     socket.on("typing", (noteId: string) => {
@@ -37,9 +44,20 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
     });
 
     // USER EDITS NOTE
-    socket.on("note-change", ({ noteId, content }) => {
-        // save
-        notes[noteId] = content;
+    socket.on("note-change", async ({ noteId, content }) => {
+        if (saveTimeouts[noteId]) {
+            clearTimeout(saveTimeouts[noteId]);
+        }
+
+        saveTimeouts[noteId] = setTimeout(async () => {
+            await Note.findOneAndUpdate(
+                { noteId },
+                { content },
+                { upsert: true }
+            );
+
+            console.log("Saved to DB");
+        }, 2000); // debounce save by 2 seconds
 
         //  send content + sender id
         socket.to(noteId).emit("note-update", {
