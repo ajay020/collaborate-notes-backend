@@ -9,6 +9,3 @@ export const connectDB = async () => {
         process.exit(1);
     }
 };
-
-// user: ajay
-// password: 0Ik9bmFFMMFUHho1
