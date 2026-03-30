@@ -1,7 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Note } from "../models/Note";
 
-const notes: Record<string, string> = {};
 const saveTimeouts: Record<string, NodeJS.Timeout> = {};
 
 // noteId -> set of socketIds
@@ -12,16 +11,16 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
 
     // USER JOINS A ROOM (NOTE)
     socket.on("join-note", async (noteId: string) => {
+        const userId = (socket as any).userId;
+        console.log(`User ${userId} joined with noteId ${noteId}`);
+
         socket.join(noteId);
 
-        // init if not exists
         if (!noteUsers[noteId]) {
             noteUsers[noteId] = new Set();
         }
 
         noteUsers[noteId].add(socket.id);
-
-        console.log(`User ${socket.id} joined ${noteId}`);
 
         //  send updated count
         io.to(noteId).emit("users-update", {
@@ -29,13 +28,18 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
         });
 
         // send existing note
-        let note = await Note.findOne({ noteId });
-
-        if (!note) {
-            note = await Note.create({ noteId, content: "" });
-        }
+        const note = await Note.findOneAndUpdate(
+            { noteId, owner: userId },
+            { $setOnInsert: { content: "" } },
+            { new: true, upsert: true }
+        );
 
         socket.emit("note-load", note.content);
+
+        // tell frontend if user is owner
+        socket.emit("note-role", {
+            isOwner: note.owner?.toString() === userId,
+        });
     });
 
     socket.on("typing", (noteId: string) => {
@@ -45,6 +49,14 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
 
     // USER EDITS NOTE
     socket.on("note-change", async ({ noteId, content }) => {
+        console.log(`User ${socket.id} changed note ${noteId}`);
+
+        const userId = (socket as any).userId;
+
+        const note = await Note.findOne({ noteId });
+
+        if (!note) return;
+
         if (saveTimeouts[noteId]) {
             clearTimeout(saveTimeouts[noteId]);
         }
