@@ -8,6 +8,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+})
 
 app.use("/api/auth", authRoutes);
 
