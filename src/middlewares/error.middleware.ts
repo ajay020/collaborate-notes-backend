@@ -8,17 +8,21 @@ export const globalErrorHandler = (
     next: NextFunction
 ) => {
     console.error(err);
+    console.error(
+        `${req.method} ${req.originalUrl} - ${err.status || 500} - ${err.message}`
+    );
 
     if (err instanceof AppError) {
-        console.error("AppError:", err.message, err.errors);
+        console.error("AppError:", err.errors);
 
         return res.status(err.status).json({
             message: err.message,
-            errors: err.errors,
+            errors: err.errors || null,
         });
     }
 
     res.status(err.status || 500).json({
         message: err.message || "Internal Server Error",
+        error: null
     });
 };

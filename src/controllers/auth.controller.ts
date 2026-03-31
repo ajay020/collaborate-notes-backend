@@ -24,6 +24,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         res.json(result);
     } catch (error) {
+        console.log("Login error:", error);
         next(error);
     }
 };

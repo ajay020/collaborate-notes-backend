@@ -1,9 +1,9 @@
 
 export class AppError extends Error {
     status: number;
-    errors?: any;
+    errors?: Record<string, string[]>;
 
-    constructor(message: string, status: number, errors?: any) {
+    constructor(message: string, status: number, errors?: Record<string, string[]>) {
         super(message);
         this.status = status;
         this.errors = errors;
