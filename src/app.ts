@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
+import noteRoutes from "./routes/note.toutes";
 import { globalErrorHandler } from "./middlewares/error.middleware";
 import { logger } from "./middlewares/logger.moddleware";
 
@@ -20,6 +21,7 @@ app.use((req, res, next) => {
 })
 
 app.use("/api/auth", authRoutes);
+app.use("/api/notes", noteRoutes);
 
 // global error handler (must be last)
 app.use(globalErrorHandler);

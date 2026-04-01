@@ -11,7 +11,7 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
 
     // USER JOINS A ROOM (NOTE)
     socket.on("join-note", async (noteId: string) => {
-        const userId = (socket as any).userId;
+        const userId = socket.data.userId;
         console.log(`User ${userId} joined with noteId ${noteId}`);
 
         socket.join(noteId);
@@ -28,11 +28,13 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
         });
 
         // send existing note
-        const note = await Note.findOneAndUpdate(
+        const note = await Note.findOne(
             { noteId, owner: userId },
-            { $setOnInsert: { content: "" } },
-            { new: true, upsert: true }
         );
+
+        if (!note) {
+            return socket.emit("error", { message: "Note not found" });
+        }
 
         socket.emit("note-load", note.content);
 
@@ -51,7 +53,7 @@ export const registerNoteHandlers = (io: Server, socket: Socket) => {
     socket.on("note-change", async ({ noteId, content }) => {
         console.log(`User ${socket.id} changed note ${noteId}`);
 
-        const userId = (socket as any).userId;
+        const userId = socket.data.userId;
 
         const note = await Note.findOne({ noteId });
 

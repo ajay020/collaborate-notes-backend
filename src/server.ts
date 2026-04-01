@@ -1,10 +1,9 @@
+import "./config/env";
 import http from "http";
-import dotenv from "dotenv";
 import app from "./app";
 import { connectDB } from "./config/db";
 import { initSockets } from "./sockets";
 
-dotenv.config();
 
 const startServer = async () => {
     try {
