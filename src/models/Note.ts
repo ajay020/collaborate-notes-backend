@@ -9,4 +9,8 @@ const noteSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// indexes
+noteSchema.index({ owner: 1 });
+noteSchema.index({ owner: 1, createdAt: -1 });
+
 export const Note = mongoose.model("Note", noteSchema);
