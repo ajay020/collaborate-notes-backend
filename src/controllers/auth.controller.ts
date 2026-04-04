@@ -3,9 +3,9 @@ import { registerUser, loginUser } from "../services/auth.service";
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { email, password } = req.body;
+        const { name , email, password } = req.body;
 
-        const result = await registerUser(email, password);
+        const result = await registerUser(name, email, password);
 
         res.status(201).json({
             message: "User created",
